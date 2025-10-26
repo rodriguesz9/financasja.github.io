@@ -1,0 +1,79 @@
+/* ===== Tema geral ===== */
+body {
+  background: #121212;
+  color: #fff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ===== Sidebar ===== */
+.sidebar {
+  min-height: 100vh;
+  background: #1c1c1e;
+  border-right: 1px solid #2c2c2e;
+}
+.sidebar .nav-link {
+  color: #bbb;
+  padding: 12px 20px;
+  border-radius: 10px;
+  transition: 0.3s;
+}
+.sidebar .nav-link:hover {
+  color: #fff;
+  background: #2d2d30;
+}
+.sidebar .nav-link.active {
+  color: #fff;
+  background: #5f259f;
+}
+
+/* ===== Cards ===== */
+.card {
+  border: none;
+  border-radius: 20px;
+}
+.card.bg-dark {
+  background: #1c1c1e;
+}
+.card.bg-purple {
+  background: linear-gradient(135deg, #5f259f, #7b3fe0);
+  color: #fff;
+}
+
+/* ===== Footer ===== */
+footer {
+  background: #1c1c1e;
+  color: #aaa;
+  padding: 20px;
+  text-align: center;
+  margin-top: 30px;
+  border-top: 1px solid #2c2c2e;
+}
+footer a {
+  color: #5f259f;
+  text-decoration: none;
+}
+footer a:hover {
+  color: #7b3fe0;
+}
+/* 🔧 Correção definitiva para modais Bootstrap */
+.modal {
+  display: none;
+  opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 1055 !important;
+  background: transparent !important;
+}
+
+/* O fundo escurecido do modal */
+.modal-backdrop.show {
+  opacity: 0.7 !important;
+  z-index: 1050 !important;
+}
+
+/* Ajuste de cores do conteúdo, sem esconder o modal */
+.modal-content {
+  background-color: var(--dark-bg, #1a1a1a);
+  color: white;
+  border: 1px solid var(--primary-purple, #8a2be2);
+  z-index: 1060 !important;
+}
