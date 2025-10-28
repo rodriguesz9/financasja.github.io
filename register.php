@@ -46,9 +46,10 @@ if ($_POST) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cadastro - FinancasJa</title>
+    <title>Cadastro - FinançasJá</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <style>
         body {
             background: linear-gradient(135deg, #170027ff 0%, #764ba2 100%);
@@ -70,7 +71,7 @@ if ($_POST) {
                 <div class="register-card p-5">
                     <div class="text-center mb-4">
                         <i class="bi bi-bar-chart-fill text-primary fs-1"></i>
-                        <h2 class="fw-bold mt-2">FinancasJa</h2>
+                        <h2 class="fw-bold mt-2">FinançasJá</h2>
                         <p class="text-muted">Crie sua conta</p>
                     </div>
                     

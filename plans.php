@@ -16,6 +16,7 @@ $user_name = $_SESSION['user_name'];
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <style>
         .pricing-card {
             transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -71,7 +72,7 @@ $user_name = $_SESSION['user_name'];
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="chatbot.php">
+                        <a class="nav-link" href="conversabot.php">
                             <i class="bi bi-robot me-1"></i>Assistente IA
                         </a>
                     </li>
@@ -620,7 +621,7 @@ $user_name = $_SESSION['user_name'];
                 <ul class="list-unstyled">
                     <li class="mb-2"><a href="dashboard.php" class="footer-link">Dashboard</a></li>
                     <li class="mb-2"><a href="investments.php" class="footer-link">Investimentos</a></li>
-                    <li class="mb-2"><a href="chatbot.php" class="footer-link">Assistente IA</a></li>
+                    <li class="mb-2"><a href="conversabot.php" class="footer-link">Assistente IA</a></li>
                     <li class="mb-2"><a href="education.php" class="footer-link">Academia</a></li>
                 </ul>
             </div>

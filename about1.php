@@ -13,6 +13,7 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body>
     <!-- Navbar -->
@@ -43,7 +44,7 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="chatbot.php">
+                            <a class="nav-link" href="conversabot.php">
                                 <i class="bi bi-robot me-1"></i>Assistente IA
                             </a>
                         </li>
@@ -186,7 +187,7 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
                             <div class="row g-4 text-center">
                                 <div class="col-6">
                                     <div class="p-3">
-                                        <h2 class="text-purple fw-bold mb-2">2024</h2>
+                                        <h2 class="text-purple fw-bold mb-2">2025</h2>
                                         <p class="text-muted mb-0">Ano de Fundação</p>
                                     </div>
                                 </div>
@@ -408,7 +409,7 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
                     <ul class="list-unstyled">
                         <li class="mb-2"><a href="dashboard.php" class="footer-link">Dashboard</a></li>
                         <li class="mb-2"><a href="investments.php" class="footer-link">Investimentos</a></li>
-                        <li class="mb-2"><a href="chatbot.php" class="footer-link">Assistente IA</a></li>
+                        <li class="mb-2"><a href="conversabot.php" class="footer-link">Assistente IA</a></li>
                         <li class="mb-2"><a href="education.php" class="footer-link">Academia</a></li>
                     </ul>
                 </div>

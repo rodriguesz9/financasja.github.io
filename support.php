@@ -14,6 +14,7 @@ $user_name = $_SESSION['user_name'];
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
  <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark navbar-modern sticky-top">
@@ -42,7 +43,7 @@ $user_name = $_SESSION['user_name'];
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="chatbot.php">
+                        <a class="nav-link" href="conversabot.php">
                             <i class="bi bi-robot me-1"></i>Assistente IA
                         </a>
                     </li>

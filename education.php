@@ -7,113 +7,163 @@ requireLogin();
 $user_id = $_SESSION['user_id'];
 $user_name = $_SESSION['user_name'];
 
+// ==================== FUNÇÕES AUXILIARES ====================
+
 // Criar tabelas necessárias
-try {
-    // Tabela de progresso (corrigir nome da tabela original)
-    $pdo->exec("CREATE TABLE IF NOT EXISTS course_progress (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        lesson_id VARCHAR(50) NOT NULL,
-        completed BOOLEAN DEFAULT FALSE,
-        completed_at TIMESTAMP NULL,
-        UNIQUE KEY unique_progress (user_id, lesson_id)
-    )");
-    
-    // Tabela de certificados
-    $pdo->exec("CREATE TABLE IF NOT EXISTS course_certificates (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        module_id VARCHAR(50) NOT NULL,
-        completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE KEY unique_certificate (user_id, module_id)
-    )");
-    
-    // Tabela de quiz
-    $pdo->exec("CREATE TABLE IF NOT EXISTS quiz_results (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        nivel INT NOT NULL,
-        acertos INT NOT NULL,
-        total INT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )");
-} catch (PDOException $e) {
-    // Ignorar erro
-}
+function createTables($pdo)
+{
+    try {
+        $tables = [
+            "CREATE TABLE IF NOT EXISTS course_progress (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                lesson_id VARCHAR(50) NOT NULL,
+                completed BOOLEAN DEFAULT FALSE,
+                completed_at TIMESTAMP NULL,
+                UNIQUE KEY unique_progress (user_id, lesson_id),
+                INDEX idx_user (user_id)
+            )",
+            "CREATE TABLE IF NOT EXISTS course_certificates (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                module_id VARCHAR(50) NOT NULL,
+                completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_certificate (user_id, module_id),
+                INDEX idx_user (user_id)
+            )",
+            "CREATE TABLE IF NOT EXISTS quiz_results (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                nivel INT NOT NULL,
+                acertos INT NOT NULL,
+                total INT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_user_nivel (user_id, nivel)
+            )"
+        ];
 
-// Marcar aula como completa/incompleta
-if (isset($_POST['toggle_lesson'])) {
-    $lesson_id = $_POST['lesson_id'];
-    $module_id = $_POST['module_id'] ?? '';
-
-    // Buscar status atual
-    $stmt = $pdo->prepare("SELECT completed FROM course_progress WHERE user_id = ? AND lesson_id = ?");
-    $stmt->execute([$user_id, $lesson_id]);
-    $current = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($current) {
-        // Se existe, inverte o status (1 vira 0, 0 vira 1)
-        $new_status = ($current['completed'] == 1) ? 0 : 1;
-        $new_date = ($new_status == 1) ? date('Y-m-d H:i:s') : null;
-        
-        $stmt = $pdo->prepare("UPDATE course_progress SET completed = ?, completed_at = ? WHERE user_id = ? AND lesson_id = ?");
-        $stmt->execute([$new_status, $new_date, $user_id, $lesson_id]);
-    } else {
-        // Se não existe, cria como completo
-        $stmt = $pdo->prepare("INSERT INTO course_progress (user_id, lesson_id, completed, completed_at) VALUES (?, ?, 1, NOW())");
-        $stmt->execute([$user_id, $lesson_id]);
+        foreach ($tables as $sql) {
+            $pdo->exec($sql);
+        }
+    } catch (PDOException $e) {
+        error_log("Erro ao criar tabelas: " . $e->getMessage());
     }
-
-    // Verificar se o módulo foi completado
-    if ($module_id) {
-        checkModuleCompletion($pdo, $user_id, $module_id);
-    }
-
-    header('Location: education.php');
-    exit();
 }
 
 // Função para verificar conclusão do módulo
-function checkModuleCompletion($pdo, $user_id, $module_id) {
-    global $courses;
-    
-    if (!isset($courses[$module_id])) return;
-    
+function checkModuleCompletion($pdo, $user_id, $module_id, $courses)
+{
+    if (!isset($courses[$module_id])) return false;
+
     $module = $courses[$module_id];
     $lesson_ids = array_column($module['lessons'], 'id');
-    
+
     // Contar aulas completas do módulo
     $placeholders = str_repeat('?,', count($lesson_ids) - 1) . '?';
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM course_progress 
-                          WHERE user_id = ? AND lesson_id IN ($placeholders) AND completed = TRUE");
+                          WHERE user_id = ? AND lesson_id IN ($placeholders) AND CAST(completed AS UNSIGNED) = 1");
     $stmt->execute(array_merge([$user_id], $lesson_ids));
     $completed_count = $stmt->fetchColumn();
-    
+
     // Se completou todas as aulas, gerar certificado
     if ($completed_count == count($lesson_ids)) {
-        $stmt = $pdo->prepare("INSERT IGNORE INTO course_certificates (user_id, module_id) VALUES (?, ?)");
+        // Verificar se já existe certificado
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM course_certificates WHERE user_id = ? AND module_id = ?");
         $stmt->execute([$user_id, $module_id]);
+        $has_certificate = $stmt->fetchColumn() > 0;
+
+        if (!$has_certificate) {
+            $stmt = $pdo->prepare("INSERT INTO course_certificates (user_id, module_id) VALUES (?, ?)");
+            $stmt->execute([$user_id, $module_id]);
+            return true; // Módulo acabou de ser completado
+        }
     }
+
+    return false;
 }
 
-// Buscar aulas completas
-$stmt = $pdo->prepare("SELECT lesson_id, completed FROM course_progress WHERE user_id = ?");
-$stmt->execute([$user_id]);
-$progress_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Buscar progresso do usuário
+function getUserProgress($pdo, $user_id)
+{
+    $stmt = $pdo->prepare("SELECT lesson_id, CAST(completed AS UNSIGNED) as completed FROM course_progress WHERE user_id = ?");
+    $stmt->execute([$user_id]);
+    $progress_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$completed_lessons = [];
-foreach ($progress_data as $row) {
-    if ($row['completed'] == 1 || $row['completed'] == '1' || $row['completed'] === true) {
-        $completed_lessons[] = $row['lesson_id'];
+    $completed_lessons = [];
+    foreach ($progress_data as $row) {
+        if ($row['completed'] == 1 || $row['completed'] === 1 || $row['completed'] === '1') {
+            $completed_lessons[] = $row['lesson_id'];
+        }
     }
+
+    return $completed_lessons;
 }
 
-// Buscar certificados
-$stmt = $pdo->prepare("SELECT module_id, completed_at FROM course_certificates WHERE user_id = ?");
-$stmt->execute([$user_id]);
-$certificates = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+// Buscar certificados do usuário
+function getUserCertificates($pdo, $user_id)
+{
+    $stmt = $pdo->prepare("SELECT module_id, completed_at FROM course_certificates WHERE user_id = ?");
+    $stmt->execute([$user_id]);
+    return $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+}
 
-// CURSOS
+// Calcular estatísticas de progresso
+function calculateProgress($courses, $completed_lessons)
+{
+    $stats = [
+        'total_lessons' => 0,
+        'total_completed' => 0,
+        'total_modules' => count($courses),
+        'completed_modules' => 0,
+        'module_progress' => []
+    ];
+
+    foreach ($courses as $module_id => $module) {
+        $module_total = count($module['lessons']);
+        $module_completed = 0;
+
+        foreach ($module['lessons'] as $lesson) {
+            if (in_array($lesson['id'], $completed_lessons)) {
+                $module_completed++;
+                $stats['total_completed']++;
+            }
+            $stats['total_lessons']++;
+        }
+
+        $percentage = $module_total > 0 ? round(($module_completed / $module_total) * 100) : 0;
+        $is_completed = $percentage === 100;
+
+        if ($is_completed) {
+            $stats['completed_modules']++;
+        }
+
+        $stats['module_progress'][$module_id] = [
+            'completed' => $module_completed,
+            'total' => $module_total,
+            'percentage' => $percentage,
+            'is_completed' => $is_completed
+        ];
+    }
+
+    $stats['overall_progress'] = $stats['total_lessons'] > 0
+        ? round(($stats['total_completed'] / $stats['total_lessons']) * 100)
+        : 0;
+    $stats['all_courses_completed'] = $stats['completed_modules'] === $stats['total_modules'];
+
+    return $stats;
+}
+
+// Função para extrair ID do vídeo YouTube
+function getYouTubeEmbedUrl($url)
+{
+    if (preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\?]+)/', $url, $matches)) {
+        return "https://www.youtube.com/embed/{$matches[1]}";
+    }
+    return '';
+}
+
+// ==================== CURSOS ====================
+
 $courses = [
     'module_1' => [
         'title' => 'Fundamentos das Finanças Pessoais',
@@ -225,59 +275,64 @@ $courses = [
     ]
 ];
 
-// Calcular progresso
-$module_progress = [];
-$total_lessons = 0;
-$total_completed = 0;
-$total_modules = count($courses);
-$completed_modules = 0;
+// ==================== PROCESSAMENTO ====================
 
-foreach ($courses as $module_id => $module) {
-    $module_total = count($module['lessons']);
-    $module_completed = 0;
-    
-    foreach ($module['lessons'] as $lesson) {
-        if (in_array($lesson['id'], $completed_lessons)) {
-            $module_completed++;
-            $total_completed++;
+createTables($pdo);
+
+// Marcar/desmarcar aula como completa
+if (isset($_POST['toggle_lesson'])) {
+    $lesson_id = $_POST['lesson_id'];
+    $module_id = $_POST['module_id'] ?? '';
+
+    // Buscar status atual
+    $stmt = $pdo->prepare("SELECT CAST(completed AS UNSIGNED) as completed FROM course_progress WHERE user_id = ? AND lesson_id = ?");
+    $stmt->execute([$user_id, $lesson_id]);
+    $current = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($current !== false) {
+        // Se existe, inverte o status
+        $new_status = ($current['completed'] == 1) ? 0 : 1;
+        $new_date = ($new_status == 1) ? date('Y-m-d H:i:s') : null;
+
+        $stmt = $pdo->prepare("UPDATE course_progress SET completed = ?, completed_at = ? WHERE user_id = ? AND lesson_id = ?");
+        $stmt->execute([$new_status, $new_date, $user_id, $lesson_id]);
+    } else {
+        // Se não existe, cria como completo
+        $stmt = $pdo->prepare("INSERT INTO course_progress (user_id, lesson_id, completed, completed_at) VALUES (?, ?, 1, NOW())");
+        $stmt->execute([$user_id, $lesson_id]);
+    }
+
+    // Verificar se o módulo foi completado
+    if ($module_id) {
+        $module_just_completed = checkModuleCompletion($pdo, $user_id, $module_id, $courses);
+
+        if ($module_just_completed) {
+            header('Location: education.php?module_completed=' . urlencode($module_id));
+            exit();
         }
-        $total_lessons++;
     }
-    
-    $percentage = $module_total > 0 ? round(($module_completed / $module_total) * 100) : 0;
-    $is_module_completed = $percentage == 100;
-    
-    if ($is_module_completed) {
-        $completed_modules++;
-    }
-    
-    $module_progress[$module_id] = [
-        'completed' => $module_completed,
-        'total' => $module_total,
-        'percentage' => $percentage,
-        'is_completed' => $is_module_completed
-    ];
+
+    header('Location: education.php');
+    exit();
 }
 
-$overall_progress = $total_lessons > 0 ? round(($total_completed / $total_lessons) * 100) : 0;
-$all_courses_completed = $completed_modules == $total_modules;
-
-// Função para extrair ID do vídeo YouTube
-function getYouTubeEmbedUrl($url) {
-    preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\?]+)/', $url, $matches);
-    return isset($matches[1]) ? "https://www.youtube.com/embed/{$matches[1]}" : '';
-}
+// Buscar dados do usuário
+$completed_lessons = getUserProgress($pdo, $user_id);
+$certificates = getUserCertificates($pdo, $user_id);
+$progress = calculateProgress($courses, $completed_lessons);
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Academia Financeira - FinanceApp</title>
+    <title>Academia Financeira - FinançasJá</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <style>
         .lesson-item {
             padding: 1.25rem;
@@ -288,18 +343,18 @@ function getYouTubeEmbedUrl($url) {
             transition: all 0.3s ease;
             cursor: pointer;
         }
-        
+
         .lesson-item:hover {
             border-color: #667eea;
             transform: translateX(5px);
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
         }
-        
+
         .lesson-item.completed {
             background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
             border-color: #28a745;
         }
-        
+
         .video-container {
             position: relative;
             padding-bottom: 56.25%;
@@ -308,7 +363,7 @@ function getYouTubeEmbedUrl($url) {
             border-radius: 15px;
             background: #000;
         }
-        
+
         .video-container iframe {
             position: absolute;
             top: 0;
@@ -317,13 +372,13 @@ function getYouTubeEmbedUrl($url) {
             height: 100%;
             border: none;
         }
-        
+
         .checkbox-custom {
             width: 24px;
             height: 24px;
             cursor: pointer;
         }
-        
+
         .quiz-badge {
             position: absolute;
             top: -10px;
@@ -337,7 +392,7 @@ function getYouTubeEmbedUrl($url) {
             box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
             z-index: 10;
         }
-        
+
         .certificate-badge {
             position: absolute;
             top: 15px;
@@ -351,58 +406,66 @@ function getYouTubeEmbedUrl($url) {
             box-shadow: 0 4px 10px rgba(253, 160, 133, 0.3);
             z-index: 10;
         }
-        
+
         .confetti {
             position: fixed;
             width: 10px;
             height: 10px;
             background: #f0f;
-            position: absolute;
             animation: confetti-fall 3s linear forwards;
         }
-        
+
         @keyframes confetti-fall {
             to {
                 transform: translateY(100vh) rotate(360deg);
                 opacity: 0;
             }
         }
-        
+
         .celebration-modal {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
         }
-        
+
         .trophy-icon {
             font-size: 5rem;
             animation: trophy-bounce 1s ease-in-out infinite;
         }
-        
+
         @keyframes trophy-bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-20px); }
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-20px);
+            }
         }
-        
+
         .stars {
             font-size: 2rem;
             animation: stars-twinkle 1.5s ease-in-out infinite;
         }
-        
+
         @keyframes stars-twinkle {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
         }
-        
-        .progress-ring {
-            width: 120px;
-            height: 120px;
-        }
-        
+
         .module-completed-badge {
             position: relative;
-            overflow: hidden;
+            overflow: visible;
         }
-        
+
         .module-completed-badge::after {
             content: '✓';
             position: absolute;
@@ -412,15 +475,80 @@ function getYouTubeEmbedUrl($url) {
             font-size: 4rem;
             color: rgba(40, 167, 69, 0.1);
             font-weight: bold;
+            pointer-events: none;
+            z-index: 0;
         }
+
+        .card-modern.module-completed-badge .card-body {
+            position: relative;
+            z-index: 1;
+        }
+
+        #teste1 {
+            color: black;
+        }
+        /* Adicione este CSS ao arquivo education.php na seção <style> */
+
+/* Corrigir cor do texto nas aulas */
+.lesson-item {
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    border-radius: 15px;
+    background: white;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    color: #000 !important; /* Força texto preto */
+}
+
+.lesson-item h6,
+.lesson-item p,
+.lesson-item small {
+    color: #000 !important; /* Garante que títulos, parágrafos e textos pequenos sejam pretos */
+}
+
+.lesson-item .text-muted {
+    color: #6c757d !important; /* Texto secundário em cinza escuro */
+}
+
+.lesson-item .text-purple {
+    color: #8a2be2 !important; /* Mantém roxo para o link de assistir */
+}
+
+/* Garantir que textos permaneçam legíveis em aulas completas */
+.lesson-item.completed h6,
+.lesson-item.completed p {
+    color: #155724 !important; /* Verde escuro para melhor contraste */
+}
+
+.lesson-item.completed .text-muted {
+    color: #1e7e34 !important; /* Verde médio para texto secundário */
+}
+
+/* Corrigir ID teste1 e teste2 mencionados no código */
+#teste1,
+#teste2 {
+    color: #000 !important;
+}
+
+#teste1 h6,
+#teste1 p,
+#teste1 small,
+#teste2 h6,
+#teste2 p,
+#teste2 small {
+    color: #000 !important;
+}
+        
     </style>
 </head>
+
 <body>
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark navbar-modern sticky-top">
         <div class="container">
             <a class="navbar-brand" href="home.php">
-                <i class="bi bi-gem me-2"></i>FinancasJa
+                <i class="bi bi-gem me-2"></i>FinançasJá
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -443,7 +571,7 @@ function getYouTubeEmbedUrl($url) {
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="chatbot.php">
+                        <a class="nav-link" href="conversabot.php.php">
                             <i class="bi bi-robot me-1"></i>Assistente IA
                         </a>
                     </li>
@@ -471,7 +599,9 @@ function getYouTubeEmbedUrl($url) {
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>Perfil</a></li>
                             <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Configurações</a></li>
-                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
                             <li><a class="dropdown-item text-danger" href="logout.php"><i class="bi bi-box-arrow-right me-2"></i>Sair</a></li>
                         </ul>
                     </li>
@@ -496,13 +626,13 @@ function getYouTubeEmbedUrl($url) {
                             <div class="mb-2">
                                 <i class="bi bi-trophy-fill text-warning" style="font-size: 3rem;"></i>
                             </div>
-                            <h2 class="display-4 fw-bold text-purple mb-0"><?= $overall_progress ?>%</h2>
-                            <p style="color: #6c757d;" class="mb-1">Progresso Geral</p>
-                            <small style="color: #6c757d;"><?= $total_completed ?> de <?= $total_lessons ?> aulas concluídas</small>
+                            <h2 class="display-4 fw-bold text-purple mb-0"><?= $progress['overall_progress'] ?>%</h2>
+                            <p style="color: #ffffffff;" class="mb-1">Progresso Geral</p>
+                            <small style="color: #ffffffff;">
+                                <?= $progress['total_completed'] ?> de <?= $progress['total_lessons'] ?> aulas concluídas
+                            </small>
                             <div class="mt-3">
-                                <div class="d-flex justify-content-center gap-2">
-                                    <span class="badge bg-success"><?= $completed_modules ?> módulos completos</span>
-                                </div>
+                                <span class="badge bg-success"><?= $progress['completed_modules'] ?> módulos completos</span>
                             </div>
                         </div>
                     </div>
@@ -520,72 +650,70 @@ function getYouTubeEmbedUrl($url) {
         </div>
 
         <!-- Módulos -->
-        <?php foreach ($courses as $module_id => $module): ?>
-            <?php 
-            $is_module_complete = $module_progress[$module_id]['is_completed'];
+        <?php foreach ($courses as $module_id => $module):
+            $module_stats = $progress['module_progress'][$module_id];
             $has_certificate = isset($certificates[$module_id]);
-            ?>
-            <div class="card-modern mb-4 position-relative <?= $is_module_complete ? 'module-completed-badge' : '' ?>">
+        ?>
+            <div class="card-modern mb-4 position-relative <?= $module_stats['is_completed'] ? 'module-completed-badge' : '' ?>">
                 <?php if ($has_certificate): ?>
                     <div class="certificate-badge">
                         <i class="bi bi-award-fill me-1"></i>Certificado Obtido
                     </div>
                 <?php endif; ?>
-                
+
                 <?php if (isset($module['quiz_nivel'])): ?>
                     <a href="quiz.php?nivel=<?= $module['quiz_nivel'] ?>" class="quiz-badge text-decoration-none">
                         <i class="bi bi-lightning-fill me-1"></i>Quiz Nível <?= $module['quiz_nivel'] ?>
                     </a>
                 <?php endif; ?>
-                
+
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h4 class="fw-bold mb-0">
                             <i class="bi bi-<?= $module['icon'] ?> text-<?= $module['color'] ?> me-2"></i>
-                            <?= $module['title'] ?>
-                            <?php if ($is_module_complete): ?>
+                            <?= htmlspecialchars($module['title']) ?>
+                            <?php if ($module_stats['is_completed']): ?>
                                 <i class="bi bi-check-circle-fill text-success ms-2"></i>
                             <?php endif; ?>
                         </h4>
                         <span class="badge badge-<?= $module['color'] ?> fs-6">
-                            <?= $module_progress[$module_id]['percentage'] ?>% Completo
+                            <?= $module_stats['percentage'] ?>% Completo
                         </span>
                     </div>
-                    
+
                     <div class="progress mb-4" style="height: 12px; border-radius: 10px;">
-                        <div class="progress-bar bg-<?= $module['color'] ?>" 
-                             style="width: <?= $module_progress[$module_id]['percentage'] ?>%"></div>
+                        <div class="progress-bar bg-<?= $module['color'] ?>"
+                            style="width: <?= $module_stats['percentage'] ?>%"></div>
                     </div>
 
                     <div class="row g-3">
-                        <?php foreach ($module['lessons'] as $lesson): ?>
-                            <?php 
+                        <?php foreach ($module['lessons'] as $lesson):
                             $is_completed = in_array($lesson['id'], $completed_lessons);
                             $embed_url = getYouTubeEmbedUrl($lesson['youtube']);
-                            ?>
-                            <div class="col-md-6">
-                                <div class="lesson-item <?= $is_completed ? 'completed' : '' ?>" 
-                                     data-bs-toggle="modal" 
-                                     data-bs-target="#lessonModal"
-                                     data-lesson-id="<?= $lesson['id'] ?>"
-                                     data-module-id="<?= $module_id ?>"
-                                     data-lesson-title="<?= htmlspecialchars($lesson['title']) ?>"
-                                     data-lesson-desc="<?= htmlspecialchars($lesson['desc']) ?>"
-                                     data-lesson-url="<?= $embed_url ?>"
-                                     data-lesson-completed="<?= $is_completed ? '1' : '0' ?>">
+                        ?>
+                            <div class="col-md-6" id="teste1">
+                                <div class="lesson-item <?= $is_completed ? 'completed' : '' ?>"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#lessonModal"
+                                    data-lesson-id="<?= htmlspecialchars($lesson['id']) ?>"
+                                    data-module-id="<?= htmlspecialchars($module_id) ?>"
+                                    data-lesson-title="<?= htmlspecialchars($lesson['title']) ?>"
+                                    data-lesson-desc="<?= htmlspecialchars($lesson['desc']) ?>"
+                                    data-lesson-url="<?= htmlspecialchars($embed_url) ?>"
+                                    data-lesson-completed="<?= $is_completed ? '1' : '0' ?>">
                                     <div class="d-flex align-items-start">
                                         <form method="POST" class="me-3" onclick="event.stopPropagation()">
-                                            <input type="hidden" name="lesson_id" value="<?= $lesson['id'] ?>">
-                                            <input type="hidden" name="module_id" value="<?= $module_id ?>">
-                                            <input type="checkbox" 
-                                                   name="toggle_lesson" 
-                                                   class="checkbox-custom form-check-input"
-                                                   <?= $is_completed ? 'checked' : '' ?>
-                                                   onchange="this.form.submit()">
+                                            <input type="hidden" name="lesson_id" value="<?= htmlspecialchars($lesson['id']) ?>">
+                                            <input type="hidden" name="module_id" value="<?= htmlspecialchars($module_id) ?>">
+                                            <input type="checkbox"
+                                                name="toggle_lesson"
+                                                class="checkbox-custom form-check-input"
+                                                <?= $is_completed ? 'checked' : '' ?>
+                                                onchange="this.form.submit()">
                                         </form>
-                                        <div class="flex-grow-1">
+                                        <div class="flex-grow-1" id="teste2">
                                             <h6 class="mb-1 fw-bold"><?= htmlspecialchars($lesson['title']) ?></h6>
-                                            <p class="mb-2" style="color: #6c757d; font-size: 0.9rem;">
+                                            <p class="mb-2 text-muted" style="font-size: 0.9rem;">
                                                 <?= htmlspecialchars($lesson['desc']) ?>
                                             </p>
                                             <small class="text-purple">
@@ -608,7 +736,7 @@ function getYouTubeEmbedUrl($url) {
                 <i class="bi bi-info-circle-fill fs-1 mb-3"></i>
                 <h5 class="fw-bold mb-3">Como Usar a Academia</h5>
                 <p class="mb-0">
-                    Assista às aulas em sequência, marque como concluídas conforme avança e teste seus conhecimentos 
+                    Assista às aulas em sequência, marque como concluídas conforme avança e teste seus conhecimentos
                     com os exercícios ao final de cada módulo. Bons estudos!
                 </p>
             </div>
@@ -622,7 +750,7 @@ function getYouTubeEmbedUrl($url) {
                 <div class="modal-header">
                     <div>
                         <h5 class="modal-title fw-bold" id="lessonTitle">Aula</h5>
-                        <p class="mb-0" style="color: #6c757d;" id="lessonDesc"></p>
+                        <p class="mb-0 text-muted" id="lessonDesc"></p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
@@ -690,19 +818,19 @@ function getYouTubeEmbedUrl($url) {
                         <div class="col-4">
                             <div class="bg-white bg-opacity-25 rounded p-3">
                                 <i class="bi bi-book-fill fs-1 mb-2"></i>
-                                <p class="mb-0 fw-bold"><?= $total_modules ?> Módulos</p>
+                                <p class="mb-0 fw-bold"><?= $progress['total_modules'] ?> Módulos</p>
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="bg-white bg-opacity-25 rounded p-3">
                                 <i class="bi bi-play-circle-fill fs-1 mb-2"></i>
-                                <p class="mb-0 fw-bold"><?= $total_lessons ?> Aulas</p>
+                                <p class="mb-0 fw-bold"><?= $progress['total_lessons'] ?> Aulas</p>
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="bg-white bg-opacity-25 rounded p-3">
                                 <i class="bi bi-award-fill fs-1 mb-2"></i>
-                                <p class="mb-0 fw-bold"><?= $total_modules ?> Certificados</p>
+                                <p class="mb-0 fw-bold"><?= $progress['total_modules'] ?> Certificados</p>
                             </div>
                         </div>
                     </div>
@@ -723,18 +851,38 @@ function getYouTubeEmbedUrl($url) {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Verificar se deve mostrar modal de celebração
-        <?php if ($all_courses_completed && isset($_GET['celebrate'])): ?>
-        document.addEventListener('DOMContentLoaded', function() {
-            const modal = new bootstrap.Modal(document.getElementById('allCoursesCompleteModal'));
-            modal.show();
-            createConfetti();
-        });
+        // Verificar se deve mostrar modal de celebração geral
+        <?php if ($progress['all_courses_completed'] && isset($_GET['celebrate'])): ?>
+            document.addEventListener('DOMContentLoaded', function() {
+                const modal = new bootstrap.Modal(document.getElementById('allCoursesCompleteModal'));
+                modal.show();
+                createConfetti();
+            });
+        <?php endif; ?>
+
+        // Verificar se completou um módulo específico
+        <?php if (isset($_GET['module_completed'])): ?>
+            document.addEventListener('DOMContentLoaded', function() {
+                const moduleId = '<?= htmlspecialchars($_GET['module_completed']) ?>';
+                const moduleName = <?= json_encode($courses[$_GET['module_completed']]['title'] ?? 'este módulo') ?>;
+
+                document.getElementById('completedModuleName').textContent = moduleName;
+                const modal = new bootstrap.Modal(document.getElementById('moduleCompleteModal'));
+                modal.show();
+                createConfetti();
+
+                // Verificar se todos os cursos foram completados
+                <?php if ($progress['all_courses_completed']): ?>
+                    setTimeout(() => {
+                        window.location.href = 'education.php?celebrate=1';
+                    }, 3000);
+                <?php endif; ?>
+            });
         <?php endif; ?>
 
         // Carregar vídeo no modal
         const lessonModal = document.getElementById('lessonModal');
-        lessonModal.addEventListener('show.bs.modal', function (event) {
+        lessonModal.addEventListener('show.bs.modal', function(event) {
             const button = event.relatedTarget;
             const lessonId = button.getAttribute('data-lesson-id');
             const moduleId = button.getAttribute('data-module-id');
@@ -742,24 +890,24 @@ function getYouTubeEmbedUrl($url) {
             const lessonDesc = button.getAttribute('data-lesson-desc');
             const lessonUrl = button.getAttribute('data-lesson-url');
             const isCompleted = button.getAttribute('data-lesson-completed') === '1';
-            
+
             document.getElementById('lessonTitle').textContent = lessonTitle;
             document.getElementById('lessonDesc').textContent = lessonDesc;
-            document.getElementById('videoContainer').innerHTML = 
+            document.getElementById('videoContainer').innerHTML =
                 `<iframe src="${lessonUrl}?autoplay=1" allowfullscreen allow="autoplay"></iframe>`;
             document.getElementById('modalLessonId').value = lessonId;
             document.getElementById('modalModuleId').value = moduleId;
             document.getElementById('modalCompleteCheck').checked = isCompleted;
-            
+
             // Atualizar label e badge do status
             updateLessonStatus(isCompleted);
         });
-        
+
         // Função para atualizar o status visual da aula
         function updateLessonStatus(isCompleted) {
             const label = document.getElementById('checkboxLabel');
             const badge = document.getElementById('lessonStatus');
-            
+
             if (isCompleted) {
                 label.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Aula concluída';
                 badge.className = 'badge bg-success';
@@ -770,14 +918,14 @@ function getYouTubeEmbedUrl($url) {
                 badge.innerHTML = '<i class="bi bi-clock me-1"></i>Pendente';
             }
         }
-        
+
         // Atualizar status ao mudar o checkbox (antes de submeter)
         document.getElementById('modalCompleteCheck').addEventListener('change', function() {
             updateLessonStatus(this.checked);
         });
-        
+
         // Limpar vídeo ao fechar modal
-        lessonModal.addEventListener('hidden.bs.modal', function () {
+        lessonModal.addEventListener('hidden.bs.modal', function() {
             document.getElementById('videoContainer').innerHTML = '';
         });
 
@@ -785,7 +933,7 @@ function getYouTubeEmbedUrl($url) {
         function createConfetti() {
             const colors = ['#f0f', '#0ff', '#ff0', '#f00', '#0f0', '#00f'];
             const confettiCount = 100;
-            
+
             for (let i = 0; i < confettiCount; i++) {
                 setTimeout(() => {
                     const confetti = document.createElement('div');
@@ -795,36 +943,80 @@ function getYouTubeEmbedUrl($url) {
                     confetti.style.animationDelay = Math.random() * 3 + 's';
                     confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
                     document.body.appendChild(confetti);
-                    
+
                     setTimeout(() => confetti.remove(), 5000);
                 }, i * 30);
             }
         }
-
-        // Detectar conclusão de módulo (pode ser melhorado com AJAX)
-        <?php 
-        // Verificar se algum módulo foi completado nesta requisição
-        if (isset($_POST['toggle_lesson']) && isset($_POST['module_id'])) {
-            $check_module = $_POST['module_id'];
-            if ($module_progress[$check_module]['is_completed'] && !isset($certificates[$check_module])) {
-                echo "
-                document.addEventListener('DOMContentLoaded', function() {
-                    document.getElementById('completedModuleName').textContent = '{$courses[$check_module]['title']}';
-                    const modal = new bootstrap.Modal(document.getElementById('moduleCompleteModal'));
-                    modal.show();
-                    createConfetti();
-                    
-                    // Redirecionar com parâmetro celebrate se todos os cursos foram completados
-                    setTimeout(() => {
-                        if ({$all_courses_completed}) {
-                            window.location.href = 'education.php?celebrate=1';
-                        }
-                    }, 3000);
-                });
-                ";
-            }
-        }
-        ?>
     </script>
 </body>
+<footer class="footer-modern">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="footer-brand mb-3">FinançasJá</div>
+                <p>
+                    Sua plataforma completa para gestão financeira pessoal com inteligência artificial.
+                </p>
+                <div class="d-flex gap-3">
+                    <a href="#" class="social-icon"><i class="bi bi-facebook"></i></a>
+                    <a href="#" class="social-icon"><i class="bi bi-twitter"></i></a>
+                    <a href="#" class="social-icon"><i class="bi bi-instagram"></i></a>
+                    <a href="#" class="social-icon"><i class="bi bi-linkedin"></i></a>
+                </div>
+            </div>
+
+            <div class="col-lg-2">
+                <h6 class="fw-bold mb-3">Plataforma</h6>
+                <ul class="list-unstyled">
+                    <li class="mb-2"><a href="dashboard.php" class="footer-link">Dashboard</a></li>
+                    <li class="mb-2"><a href="investments.php" class="footer-link">Investimentos</a></li>
+                    <li class="mb-2"><a href="conversabot.php.php" class="footer-link">Assistente IA</a></li>
+                    <li class="mb-2"><a href="education.php" class="footer-link">Academia</a></li>
+                </ul>
+            </div>
+
+            <div class="col-lg-2">
+                <h6 class="fw-bold mb-3">Recursos</h6>
+                <ul class="list-unstyled">
+                    <li class="mb-2"><a href="quiz.php" class="footer-link">Quiz Financeiro</a></li>
+                    <li class="mb-2"><a href="exercicios.php" class="footer-link">Exercícios</a></li>
+                    <li class="mb-2"><a href="plans.php" class="footer-link">Planos</a></li>
+                    <li class="mb-2"><a href="plans1.php" class="footer-link">Planos Premium</a></li>
+                </ul>
+            </div>
+
+            <div class="col-lg-2">
+                <h6 class="fw-bold mb-3">Suporte</h6>
+                <ul class="list-unstyled">
+                    <li class="mb-2"><a href="support.php" class="footer-link">Central de Ajuda</a></li>
+                    <li class="mb-2"><a href="support1.php" class="footer-link">Contato</a></li>
+                    <li class="mb-2"><a href="about.php" class="footer-link">Sobre Nós</a></li>
+                    <li class="mb-2"><a href="about1.php" class="footer-link">Nossa História</a></li>
+                </ul>
+            </div>
+
+            <div class="col-lg-2">
+                <h6 class="fw-bold mb-3">Conta</h6>
+                <ul class="list-unstyled">
+                    <li class="mb-2"><a href="login.php" class="footer-link">Login</a></li>
+                    <li class="mb-2"><a href="register.php" class="footer-link">Criar Conta</a></li>
+                    <li class="mb-2"><a href="logout.php" class="footer-link">Sair</a></li>
+                    <li class="mb-2"><a href="home.php" class="footer-link">Início</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <hr class="my-4" style="border-color: rgba(138, 43, 226, 0.2);">
+
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <p class="mb-0">&copy; 2025 FinançasJá. Todos os direitos reservados.</p>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <p class="mb-0">Feito com <i class="bi bi-heart-fill text-danger"></i> para sua liberdade financeira</p>
+            </div>
+        </div>
+    </div>
+</footer>
 </html>

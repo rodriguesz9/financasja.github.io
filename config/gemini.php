@@ -3,9 +3,7 @@
 
 // SUBSTITUA 'SUA_API_KEY_AQUI' pela sua chave real da API do Gemini
 define('GEMINI_API_KEY', 'AIzaSyDKJCbSc2TWtkJRQHCE2DzqCbXnje6W6T4');
-define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
-
-');
+define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent');
 
 class GeminiAPI {
     private $apiKey;
@@ -46,172 +44,102 @@ class GeminiAPI {
         $fullPrompt = $financialContext . $message;
         
         $data = [
-    'contents' => [
-        [
-            'role' => 'user',
-            'parts' => [
-                ['text' => $fullPrompt]
+            'contents' => [
+                [
+                    'role' => 'user',
+                    'parts' => [
+                        ['text' => $fullPrompt]
+                    ]
+                ]
+            ],
+            'generationConfig' => [
+                'temperature' => 0.8,
+                'topK' => 40,
+                'topP' => 0.95,
+                'maxOutputTokens' => 2048,
+                'candidateCount' => 1,
+            ],
+            'safetySettings' => [
+                [
+                    'category' => 'HARM_CATEGORY_HARASSMENT',
+                    'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'
+                ],
+                [
+                    'category' => 'HARM_CATEGORY_HATE_SPEECH',
+                    'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'
+                ],
+                [
+                    'category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                    'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'
+                ],
+                [
+                    'category' => 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                    'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'
+                ]
             ]
-        ]
-    ],
-    'generationConfig' => [
-        'temperature' => 0.8,
-        'topK' => 40,
-        'topP' => 0.95,
-        'maxOutputTokens' => 2048,
-        'candidateCount' => 1,
-    ],
-    'safetySettings' => [
-        [
-            'category' => 'HARM_CATEGORY_HARASSMENT',
-            'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'
-        ],
-        [
-            'category' => 'HARM_CATEGORY_HATE_SPEECH',
-            'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'
-        ],
-        [
-            'category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-            'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'
-        ],
-        [
-            'category' => 'HARM_CATEGORY_DANGEROUS_CONTENT',
-            'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'
-        ]
-    ]
-];
-
+        ];
         
         try {
             $response = $this->makeRequest($data);
             return $this->parseResponse($response);
         } catch (Exception $e) {
-            // Log do erro específico
-            error_log("Erro específico do Gemini: " . $e->getMessage());
-            throw $e; // Re-lançar para que o sistema use fallback
+            error_log("Erro Gemini API: " . $e->getMessage());
+            return $this->getFallbackResponse($message);
         }
     }
     
     /**
-     * Faz a requisição para a API do Gemini
+     * Faz a requisição CURL para a API
      */
     private function makeRequest($data) {
-        $ch = curl_init();
+        $ch = curl_init($this->apiUrl . '?key=' . $this->apiKey);
         
-        curl_setopt_array($ch, [
-            CURLOPT_URL => $this->apiUrl . '?key=' . $this->apiKey,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode($data),
-            CURLOPT_HTTPHEADER => [
-                'Content-Type: application/json',
-            ],
-            CURLOPT_TIMEOUT => 45,  // Aumentado para 45 segundos
-            CURLOPT_CONNECTTIMEOUT => 10,
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_USERAGENT => 'FinanceApp-Chatbot/1.0',
-            CURLOPT_FOLLOWLOCATION => true,
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json'
         ]);
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
+        
+        if (curl_errno($ch)) {
+            throw new Exception('Curl error: ' . curl_error($ch));
+        }
         
         curl_close($ch);
         
-        if ($error) {
-            throw new Exception("Erro cURL: " . $error);
+        if ($httpCode >= 400) {
+            throw new Exception('API error: HTTP ' . $httpCode . ' - ' . $response);
         }
         
-        if ($httpCode !== 200) {
-            $errorDetail = '';
-            if ($response) {
-                $responseData = json_decode($response, true);
-                if (isset($responseData['error']['message'])) {
-                    $errorDetail = ' - ' . $responseData['error']['message'];
-                }
-            }
-            throw new Exception("Erro HTTP {$httpCode}{$errorDetail}");
-        }
-        
-        $decodedResponse = json_decode($response, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception("Erro ao decodificar JSON: " . json_last_error_msg());
-        }
-        
-        return $decodedResponse;
+        return $response;
     }
     
     /**
-     * Processa a resposta da API
+     * Parseia a resposta da API
      */
     private function parseResponse($response) {
-        // Log da resposta completa para debug
-        error_log("Resposta completa do Gemini: " . json_encode($response));
+        $decoded = json_decode($response, true);
         
-        if (!isset($response['candidates'])) {
-            throw new Exception("Resposta inválida: candidates não encontrados");
+        if (isset($decoded['candidates'][0]['content']['parts'][0]['text'])) {
+            $text = $decoded['candidates'][0]['content']['parts'][0]['text'];
+            
+            // Processar formatação
+            $text = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $text);
+            $text = preg_replace('/\n/', '<br>', $text);
+            
+            // Adicionar espaçamento após títulos (linhas que terminam com :)
+            $text = preg_replace('/([^<>]+):<br>/', '<strong>$1:</strong><br>', $text);
+            
+            // Remover quebras de linha no início
+            $text = ltrim($text, '<br>');
+            
+            return $text;
         }
         
-        if (empty($response['candidates'])) {
-            throw new Exception("Nenhum candidate retornado pela API");
-        }
-        
-        $candidate = $response['candidates'][0];
-        
-        // Verificar se foi bloqueado por segurança
-        if (isset($candidate['finishReason']) && $candidate['finishReason'] === 'SAFETY') {
-            throw new Exception("Resposta bloqueada por filtros de segurança");
-        }
-        
-        if (!isset($candidate['content']['parts'][0]['text'])) {
-            throw new Exception("Texto da resposta não encontrado na estrutura retornada");
-        }
-        
-        $text = $candidate['content']['parts'][0]['text'];
-        
-        if (empty(trim($text))) {
-            throw new Exception("Resposta vazia retornada pela API");
-        }
-        
-        // Limpa e formata a resposta
-        $text = trim($text);
-        $text = $this->formatResponse($text);
-        
-        return $text;
-    }
-    
-    /**
-     * Formata a resposta para melhor exibição
-     */
-    private function formatResponse($text) {
-        // Limpar caracteres especiais desnecessários
-        $text = preg_replace('/\r\n|\r/', "\n", $text);
-        
-        // Converter markdown para HTML
-        $text = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $text);
-        $text = preg_replace('/\*(.*?)\*/', '<em>$1</em>', $text);
-        $text = preg_replace('/`(.*?)`/', '<code>$1</code>', $text);
-        
-        // Converter listas numeradas
-        $text = preg_replace('/^(\d+)\.\s/m', '<br>$1. ', $text);
-        
-        // Converter listas com bullet points
-        $text = preg_replace('/^[•\-\*]\s/m', '<br>• ', $text);
-        
-        // Converter quebras de linha
-        $text = str_replace("\n", '<br>', $text);
-        
-        // Limpar múltiplas quebras de linha consecutivas
-        $text = preg_replace('/(<br\s*\/?>){3,}/', '<br><br>', $text);
-        
-        // Adicionar espaçamento após títulos (linhas que terminam com :)
-        $text = preg_replace('/([^<>]+):<br>/', '<strong>$1:</strong><br>', $text);
-        
-        // Remover quebras de linha no início
-        $text = ltrim($text, '<br>');
-        
-        return $text;
+        throw new Exception('Resposta inválida da API');
     }
     
     /**

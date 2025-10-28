@@ -13,6 +13,7 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <style>
         .plan-card {
             position: relative;
@@ -76,7 +77,7 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
                             <a class="nav-link" href="investments.php"><i class="bi bi-graph-up me-1"></i>Investimentos</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="chatbot.php"><i class="bi bi-robot me-1"></i>Assistente IA</a>
+                            <a class="nav-link" href="conversabot.php"><i class="bi bi-robot me-1"></i>Assistente IA</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="education.php"><i class="bi bi-mortarboard me-1"></i>Academia</a>
@@ -224,7 +225,7 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
                     <ul class="list-unstyled">
                         <li class="mb-2"><a href="dashboard.php" class="footer-link">Dashboard</a></li>
                         <li class="mb-2"><a href="investments.php" class="footer-link">Investimentos</a></li>
-                        <li class="mb-2"><a href="chatbot.php" class="footer-link">Assistente IA</a></li>
+                        <li class="mb-2"><a href="conversabot.php" class="footer-link">Assistente IA</a></li>
                         <li class="mb-2"><a href="education.php" class="footer-link">Academia</a></li>
                     </ul>
                 </div>

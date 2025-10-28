@@ -311,7 +311,7 @@ if (class_exists('GeminiAPI') && defined('GEMINI_API_KEY') && GEMINI_API_KEY !==
                         </div>
 
                         <div class="text-center mt-4">
-                            <a href="chatbot.php" class="btn btn-primary">
+                            <a href="conversabot.php.php" class="btn btn-primary">
                                 <i class="bi bi-arrow-left me-2"></i>Voltar ao Chatbot
                             </a>
                             <button class="btn btn-secondary ms-2" onclick="location.reload()">

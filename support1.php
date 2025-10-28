@@ -32,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_support'])) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body>
     <!-- Navbar -->
@@ -62,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_support'])) {
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="chatbot.php">
+                            <a class="nav-link" href="conversabot.php">
                                 <i class="bi bi-robot me-1"></i>Assistente IA
                             </a>
                         </li>
@@ -142,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_support'])) {
                             <p class="text-muted mb-4">
                                 Converse com nosso assistente IA ou com um atendente em tempo real
                             </p>
-                            <a href="chatbot.php" class="btn btn-purple btn-modern">
+                            <a href="conversabot.php" class="btn btn-purple btn-modern">
                                 <i class="bi bi-robot me-2"></i>Iniciar Chat
                             </a>
                         </div>
@@ -177,7 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_support'])) {
                                 Ligue para nossa central de atendimento em horário comercial
                             </p>
                             <a href="tel:+551130000000" class="btn btn-outline-success btn-modern">
-                                <i class="bi bi-telephone me-2"></i>(11) 3000-0000
+                                <i class="bi bi-telephone me-2"></i>(31) 99409-0721
                             </a>
                         </div>
                     </div>
@@ -518,7 +519,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_support'])) {
                     <ul class="list-unstyled">
                         <li class="mb-2"><a href="dashboard.php" class="footer-link">Dashboard</a></li>
                         <li class="mb-2"><a href="investments.php" class="footer-link">Investimentos</a></li>
-                        <li class="mb-2"><a href="chatbot.php" class="footer-link">Assistente IA</a></li>
+                        <li class="mb-2"><a href="conversabot.php" class="footer-link">Assistente IA</a></li>
                         <li class="mb-2"><a href="education.php" class="footer-link">Academia</a></li>
                     </ul>
                 </div>
@@ -542,13 +543,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_support'])) {
                     <h6 class="fw-bold mb-3">Contato</h6>
                     <ul class="list-unstyled">
                         <li class="mb-2 text-muted"><i class="bi bi-envelope me-2"></i>contato@financasja.com</li>
-                        <li class="mb-2 text-muted"><i class="bi bi-telephone me-2"></i>(11) 3000-0000</li>
+                        <li class="mb-2 text-muted"><i class="bi bi-telephone me-2"></i>(31) 99409-0721</li>
                     </ul>
                 </div>
             </div>
             <hr class="my-4" style="border-color: rgba(138, 43, 226, 0.2);">
             <div class="text-center">
-                <p class="text-muted mb-0">&copy; 2024 FinançasJá. Todos os direitos reservados.</p>
+                <p class="text-muted mb-0">&copy; 2025 FinançasJá. Todos os direitos reservados.</p>
             </div>
         </div>
     </footer>

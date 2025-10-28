@@ -186,7 +186,7 @@ requireLogin();
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="chatbot.php">
+                    <a class="nav-link" href="conversabot.php">
                         <i class="bi bi-robot me-1"></i>Assistente IA
                     </a>
                 </li>
@@ -400,7 +400,7 @@ requireLogin();
                 <ul class="list-unstyled">
                     <li class="mb-2"><a href="dashboard.php" class="footer-link">Dashboard</a></li>
                     <li class="mb-2"><a href="investments.php" class="footer-link">Investimentos</a></li>
-                    <li class="mb-2"><a href="chatbot.php" class="footer-link">Assistente IA</a></li>
+                    <li class="mb-2"><a href="conversabot.php.php" class="footer-link">Assistente IA</a></li>
                     <li class="mb-2"><a href="education.php" class="footer-link">Academia</a></li>
                 </ul>
             </div>

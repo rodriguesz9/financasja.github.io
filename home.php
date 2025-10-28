@@ -41,6 +41,7 @@ $last_transaction = $stmt->fetch();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body>
     <!-- Navbar -->
@@ -70,7 +71,7 @@ $last_transaction = $stmt->fetch();
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="chatbot.php">
+                    <a class="nav-link" href="conversabot.php">
                         <i class="bi bi-robot me-1"></i>Assistente IA
                     </a>
                 </li>
@@ -124,7 +125,7 @@ $last_transaction = $stmt->fetch();
                                 <a href="dashboard.php" class="btn btn-purple btn-modern">
                                     <i class="bi bi-speedometer2 me-2"></i>Dashboard
                                 </a>
-                                <a href="chatbot.php" class="btn btn-outline-purple btn-modern">
+                                <a href="conversabot.php" class="btn btn-outline-purple btn-modern">
                                     <i class="bi bi-robot me-2"></i>Assistente IA
                                 </a>
                             </div>
@@ -238,7 +239,7 @@ $last_transaction = $stmt->fetch();
                     </div>
                     
                     <div class="col-lg-4">
-                        <div class="card-modern h-100" onclick="window.location.href='chatbot.php'" style="cursor: pointer;">
+                        <div class="card-modern h-100" onclick="window.location.href='conversabot.php'" style="cursor: pointer;">
                             <div class="card-body text-center p-4">
                                 <div class="text-info mb-3" style="font-size: 3rem;">
                                     <i class="bi bi-robot"></i>
@@ -323,7 +324,7 @@ $last_transaction = $stmt->fetch();
                         </a>
                     </div>
                     <div class="col-md-3">
-                        <a href="chatbot.php" class="card-modern d-block text-decoration-none">
+                        <a href="conversabot.php" class="card-modern d-block text-decoration-none">
                             <div class="card-body d-flex align-items-center">
                                 <i class="bi bi-chat-dots-fill text-purple fs-3 me-3"></i>
                                 <div>
@@ -387,7 +388,7 @@ $last_transaction = $stmt->fetch();
                             break;
                         case '3':
                             e.preventDefault();
-                            window.location.href = 'chatbot.php';
+                            window.location.href = 'conversabot.php';
                             break;
                         case '4':
                             e.preventDefault();
@@ -421,7 +422,7 @@ $last_transaction = $stmt->fetch();
                 <ul class="list-unstyled">
                     <li class="mb-2"><a href="dashboard.php" class="footer-link">Dashboard</a></li>
                     <li class="mb-2"><a href="investments.php" class="footer-link">Investimentos</a></li>
-                    <li class="mb-2"><a href="chatbot.php" class="footer-link">Assistente IA</a></li>
+                    <li class="mb-2"><a href="conversabot.php" class="footer-link">Assistente IA</a></li>
                     <li class="mb-2"><a href="education.php" class="footer-link">Academia</a></li>
                 </ul>
             </div>

@@ -11,18 +11,19 @@ $user_name = $_SESSION['user_name'];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sobre - FinancasJa</title>
+    <title>Sobre - FinançasJá</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body>
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark navbar-modern sticky-top">
         <div class="container">
             <a class="navbar-brand" href="home.php">
-                <i class="bi bi-gem me-2"></i>FinancasJa
+                <i class="bi bi-gem me-2"></i>FinançasJá
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -45,7 +46,7 @@ $user_name = $_SESSION['user_name'];
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="chatbot.php">
+                        <a class="nav-link" href="conversabot.php">
                             <i class="bi bi-robot me-1"></i>Assistente IA
                         </a>
                     </li>
@@ -89,7 +90,7 @@ $user_name = $_SESSION['user_name'];
                 <div class="row align-items-center">
                     <div class="col-lg-8 mx-auto">
                         <h1 class="display-4 fw-bold mb-4 fade-in-up">
-                            Sobre o FinancasJa
+                            Sobre o FinançasJá
                         </h1>
                         <p class="lead mb-4 fade-in-up" style="animation-delay: 0.2s;">
                             Transformando a forma como você gerencia suas finanças
@@ -297,7 +298,7 @@ $user_name = $_SESSION['user_name'];
                 <ul class="list-unstyled">
                     <li class="mb-2"><a href="dashboard.php" class="footer-link">Dashboard</a></li>
                     <li class="mb-2"><a href="investments.php" class="footer-link">Investimentos</a></li>
-                    <li class="mb-2"><a href="chatbot.php" class="footer-link">Assistente IA</a></li>
+                    <li class="mb-2"><a href="conversabot.php.php" class="footer-link">Assistente IA</a></li>
                     <li class="mb-2"><a href="education.php" class="footer-link">Academia</a></li>
                 </ul>
             </div>

@@ -13,6 +13,7 @@ session_start();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body>
     <!-- Navbar -->
@@ -144,7 +145,7 @@ session_start();
                                 </div>
                                 
                                 <div class="d-grid">
-                                    <button href="chatbot.php" class="btn btn-purple btn-modern">
+                                    <button href="conversabot.php" class="btn btn-purple btn-modern">
                                         <i class="bi bi-robot me-2" ></i>Perguntar à IA
                                     </button>
                                 </div>
@@ -351,9 +352,9 @@ session_start();
             <div class="col-lg-2">
                 <h6 class="fw-bold mb-3">Plataforma</h6>
                 <ul class="list-unstyled">
-                    <li class="mb-2"><a href="dashboard.php" class="footer-link">Dashboard</a></li>
+                    <li class="mb-2"><a href="dashboard.php" class="footer-link"></a></li>
                     <li class="mb-2"><a href="investments.php" class="footer-link">Investimentos</a></li>
-                    <li class="mb-2"><a href="chatbot.php" class="footer-link">Assistente IA</a></li>
+                    <li class="mb-2"><a href="conversabot.php" class="footer-link">Assistente IA</a></li>
                     <li class="mb-2"><a href="education.php" class="footer-link">Academia</a></li>
                 </ul>
             </div>
